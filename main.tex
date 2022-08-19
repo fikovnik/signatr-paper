@@ -77,30 +77,23 @@ expressive query API.  We, then, leverage this database to generate
 new function calls using the recorded values.  This approach is
 implemented in a tool called \tool for the R programming language.
 
-To show that we can discover new and interesting inputs, we inferred
-types for all of the successful calls \tool uncovered.  As R lacks
-static types, we use the {\tt contractr} type inference tool from the
-Turcotte et al. paper proposing a type annotation language for
-R~\cite{turcotte2020designing}, wherein function types were inferred
-from recorded calls in R package test, example, and vignette code (we
-define a function type inferred in this way as a \textit{call
-  signature}).  Fuzzing \UFNumFunctions of those R functions, \tool
-generated \UFSignatrSignaturesRnd (\UFSignatrBaselineSignaturesRatio
-times) new unique call signatures compared to the original study.
+To validate our tool, we revisit an application of dynamic analysis,
+namely trace typing~\cite{andreasen2016trace} where the goal is guess
+the signatures of library functions by observing the values that they
+accept and return. We perfom that experiment on R libraries and use
+the {\tt contractr} type inference tool~\cite{turcotte2020designing},
+wherein function types were inferred from recorded calls in R package
+test, example, and vignette code.  Fuzzing \UFNumFunctions of those R
+functions with our tool generated \UFSignatrSignaturesRnd new unique
+signatures compared to the original study.
 
-
-In summary, the contributions of this paper are:
-%
+In summary, our contributions aer:
 \begin{inparaenum}[(1)]
-    \item a novel fuzzing technique relying on a database of observed
-      values;
-    \item an implementation of this approach in a tool called \tool
-      for R; and
-    \item a use case for \tool where it is used to generate many yet
-      unseen, successful inputs for thousands of functions.
+\item a fuzzing technique relying on a database of observed values;
+\item an implementation of this approach in a tool for R; and
+\item a use case where we generate yet unseen signatures.
 \end{inparaenum} 
-
-The tool is open source and is available online alongside the data set
+Our tool is open source and is available online alongside the data set
 used for this paper.
 
 \section{Background and Related Work}
