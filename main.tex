@@ -19,15 +19,16 @@
 
 \begin{abstract}
 The fast-and-loose, permissive semantics of dynamic programming
-languages limit the power of static analyses. Soundness is often
+languages limit the power of static analyses. For that reason, soundness is often
 traded for precision through dynamic program analysis.  Dynamic
 analysis is only as good as the available runnable code, and relying
 solely on test suites is fraught as they do not cover the full gamut of
 possible behaviors. Fuzzing is an approach for automatically
-exercising code, and could be used to increase the runnable code.
+exercising code, and could be used to obtain more runnable code.
 However, the shape of user-defined data in dynamic languages is
-difficult to intuit, limiting a fuzzer's reach.  We propose a
-feedback-driven blackbox fuzzing approach which draws inputs from a
+difficult to intuit, limiting a fuzzer's reach.  
+
+We propose a feedback-driven blackbox fuzzing approach which draws inputs from a
 database of values recorded from existing code.  We implement this
 approach in a tool called \tool for the R programming language.  We
 present the insights of its design and implementation, and assess
@@ -52,7 +53,7 @@ semantics of dynamic languages.
 To increase coverage, one could make use of a \textit{fuzzer}, a tool
 that exercises code by generating random inputs.  Fuzz testing is
 popular and has seen widespread adoption, primarily to find bugs,
-performance pathologies and security vulnerabilities.  However,
+performance pathologies, and security vulnerabilities.  However,
 dynamically languages such as Python, JavaScript, and R pose unique
 challenges that revolve around the idea that \textit{dynamic code
   tends hide runtime errors}.  For instance, accessing a non-existent
@@ -63,17 +64,17 @@ automatically will thus have very little to go on vis-\`a-vis the
 correctness of the code being generated as there is no clear
 observable witness of an error. On top of this, the lack of static
 types leaves fuzzers with very little information about what values
-are expected to begin with.  It is difficult to generate complex
-values automatically.  In a statically typed language like Java, the
+are expected to begin with. Finally, it is difficult to generate complex
+values automatically in dynamically typed languages; in a statically typed language like Java, the
 shapes of user-defined objects can be inferred from a static class
-definition. In dynamic languages there is no such guide.  This limits
+definition. In contract, there is no such guide in dynamic languages, limiting
 a fuzzer's ability to generate realistic inputs.
 
 To get around this, we propose an approach to fuzzing that relies on
 an extensive database of observed values.  We develop a tracer that
 collects information about function calls and values created during
 code execution, and store this information in a database with an
-expressive query API.  We, then, leverage this database to generate
+expressive query API. Then, we leverage this database to generate
 new function calls using the recorded values.  This approach is
 implemented in a tool called \tool for the R programming language.
 
@@ -114,7 +115,7 @@ objects that are built up from a number of method calls, data science
 languages like R oftern require generating realistic data.  QuickCheck
 is another interesting tool in this space~\cite{quickcheck}.  While it
 can generate random inputs, the strategy for constructing inputs needs
-to be specified.  The lack of type information in R, limits the
+to be specified.  The lack of type information in R limits the
 usefulness of such approaches. American Fuzzy Lop (AFL) is a
 state-of-the-art industrial fuzzer~\cite{afl}. AFL takes a program and
 one example file as input, calls the program with the input, and then
@@ -125,7 +126,7 @@ discovers new acceptable inputs.
 
 \paragraph{The R Programming Language}
 
-We present a fuzzing tool called \tool.  R sports an unusual mix of
+We present a fuzzing tool called \tool for R, a language which sports an unusual mix of
 language features making it a challenging target for
 tooling~\cite{morandat2012evaluating}.  Challenges include:
 
