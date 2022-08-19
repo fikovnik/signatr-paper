@@ -245,113 +245,133 @@ implemented in 5K lines of C++ and 1.5K lines of R code.
 
 \paragraph{Storage}
 
-The database stores unique values.  We use \sc{xxh128} hashing for
-uniqueness, in combination with a hashtable based on RobinHood
+The database stores unique values.  We use XXH128 hashes for
+uniqueness in combination with a hashtable based on RobinHood
 hashing\footnote{\url{cyan4973.github.io/xxHash},
 \url{github.com/martinus/robin-hood-hashing}}.  While the hashing is
 fast, we need to lower R values into a binary format.  R provides a
 binary serialization XDR, but it is
 costly.\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}
 We also strip the serialization of sources of non-determinism related
-to character encodings.  Since there is a large number of values being
-pushed to the database in an average recording session, we try to
-avoid the serialization as much as possible.  For this we use the
-\emph{trace} bit that is part of the R value header\footnote{A bit in
-the \code{SEXP} C struct that represents R value.
-\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}}.
-If it is not set, then it is a fresh value so we serialize it, compute
-its hash, store it into the database and set the trace bit.  If it is
-set, we have seen it before, but in spite of R's copy-on-write
-semantics, values can actually be modified in place until they are
-aliased, thus we need to check whether or not a value has been shared,
-and if not then we serialize and check its presence using the hash.
+to character encodings.  Since many values are pushed to the database
+in an average recording session, we try to avoid serialization as much
+as possible.  For this we use the \code{trace} bit that is part of
+each value.\footnote{A bit in the C struct that represents a value,
+\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}.}
+If not set, the value is fresh and we serialize it, compute its hash,
+store it. The trace bit is then set to avoid repeated serialization.
+In spite of R's copy-on-write semantics, values can be modified in
+place before being shared, these values may be serialized repeatedly
+to capture the updates performed by the program.
 
+The database also store metadata about values and their origin.  We
+also keep a unique id for each sequence of arguments coming from the
+same call site. This allows us to replay the calls as they were
+observed.
 
-Next to the value itself, the database also store metadata about the value and its origin (the package, function and argument name).
-We also store a unique call id for each sequence of argument values coming from the same call to reproduce the calls that were recorded by the tracer.
+The database maintains tables for the hashes, runtime metadata (e.g.,
+how often a value was seen), static metadata, origins, call ids, and
+class names.  Variable length data, such as the serialized values, are
+stored in a combination of 2 tables, one giving an offset into the
+other table which holds the size of the value and the value itself.
+Origin strings and class names are interned, i.e., each unique string
+is stored separately, and referred to by pointer.  Search indices are
+built using fast compressed bitsets~\cite{chambi2016better}.  The
+database supports all values except external pointers (e.g. pointer to
+C allocated data).  Environments and closures were not stored in the
+database during our experiments since they dramatically increased
+memory pressure.
 
-The database maintains tables for the hashes, runtime metadata (e.g., how often a value was seen), static metadata, origins, call ids, and class names. 
-Variable length data, such as the serialized values, are stored in a combination of 2 tables, one giving an offset into the other table which holds the size of the value and the value itself. 
-Origin strings and class names are interned, i.e., each unique string is stored separately, and referred to by pointer. 
-Search indices are built using fast compressed bitsets~\cite{chambi2016better}.
-The database supports all R values except external pointers.
-Environments and closures (which contain environments) were not stored in the database during our experiments since they dramatically increased the size, though the database can store them.
-
-Finally, opening the database in \textit{read mode} only loads metadata and retrieves actual values from disk on demand, making it possible to query larger-than-memory databases.
+Finally, opening the database in {read mode} only loads metadata.
+Retrieving values from disk is done on demand, making it possible to
+query larger-than-memory databases.
 
 \paragraph{Queries}
 
-The database provides a convenient query API.  Values can be queried
-based on: their {\tt typeof}-type, their class, the presence of NAs,
-the number of attributes, if the value is a vector or scalar, the
-dimensions (for tabular data), and length of the value (for vector
-data).  The database can be queried for a random value with the
-desired metadata (e.g., a vector of integers of length 10), or can be
-queried by providing an existing value along with a list of search
-parameters to be relaxed (e.g., query the database for a value similar
-to {\tt 42}, but relax on the length).  A custom R predicate can also
-be used to filter desired values.
+Values can be queried based on their {\tt typeof}-type or class, on
+the presence of NAs, number of attributes, dimensions.  The database
+can be queried for a random value with the desired metadata (e.g., a
+vector of integers of length 10), or can be queried by providing an
+existing value along with a list of search parameters to be relaxed
+(e.g., query the database for a value similar to {\tt 42}, but relax
+on the length).  A custom predicate can also be used to filter
+returned values.
 
-\subsection{Fuzzing Technique}
+\subsection{Fuzzing}
 
-The database of values is at the core of the fuzzing approach, which
-is similar in spirit to mutation-based fuzzing (where instead of
-mutating arguments to previous calls, new argument values are selected
-based on previous ones).
+The value database is at the core of our fuzzing approach, which is
+similar in spirit to mutation-based fuzzing. Instead of mutating
+arguments to previous calls, new argument values are selected based on
+previous ones.
 
-The core of fuzzing is to generate new calls to a function $f$, and
-the process of choosing arguments to construct these calls is depicted
-in Algorithm~\ref{alg:arg-sel}.  In addition to the function $f$ and
-value database $db$, the algorithm considers how many query parameters
-to relax on ($numRelax$), as well as all of the previously seen
-successful calls to $f$ ($succs$).  For each parameter $p$ of $f$, the
-algorithm determines which parameters to relax on (this may change
-from one iteration to the next), finds all values that inhabited $p$
-in successful calls to $f$, chooses one such value $v$, and queries
-the database for a value similar to $v$ in all respects, save for the
-parameters that are being relaxed this time.  Note: if no successful
-calls to the function have been observed, random values for parameters
-can be chosen.
+The fuzzer generates calls to a function and chooses arguments these
+calls as depicted in Algorithm~\ref{alg:arg-sel}.  In addition to the
+target function and database, the algorithm considers how many query
+parameters to relax on (\emph{numRelax}), as well as all of the
+previously seen successful calls to the function (\emph{succs}).
+For each parameter, the algorithm determines how to relax (this may
+change from one iteration to the next), finds all values that
+inhabited that parameter in successful calls, chooses one value , and
+queries the database for a value similar to it save for the
+relaxation.  If no successful calls to the function have been
+observed, random values can be chosen.
 
 The fuzzing approach itself is depicted in Algorithm~\ref{alg:fuzzer}.
-First, the collection of already known successful calls to $f$ is
-obtained from the database $db$.  The main idea of the approach is to
-start by selecting new arguments essentially at random by querying the
-database and relaxing on many parameters, and gradually reduce the
-number of parameters being relaxed as the fuzzer progresses.
-Concretely, the number of parameters being relaxed is reduced every
-$tick$, which is determined by dividing the total fuzzing budget by
-the number of parameters that can be relaxed ($numRelaxParams$).
-The function $f$ will be fuzzed for as long as the budget allows, and
+First, the collection of already known calls to function is obtained
+from the database.  The main idea of the approach is to start by
+selecting new arguments essentially at random by querying the database
+and relaxing on many parameters, and gradually reduce the number of
+parameters being relaxed as the fuzzer progresses.  Concretely, the
+number of parameters being relaxed is reduced every \emph{tick},
+which is determined by dividing the total fuzzing budget by the number
+of parameters that can be relaxed (\emph{numRelaxParams}).  The
+function will be fuzzed for as long as the budget allows, and
 initially all database parameters will be relaxed.  Arguments for a
-new call to $f$ are generated through the approach depicted in
-Algorithm~\ref{alg:arg-sel} ($getArgs$), the call is performed, and
-the results are saved in $res$.  If there were no errors, warnings, or
-crashes, then the successful call is added to the list of successful
-calls $succs$, and iteration continues until the budget is exhausted.
+new call are generated through the approach depicted in
+Algorithm~\ref{alg:arg-sel} (\emph{getArgs}), the call is performed,
+and the results are saved in \emph{res}.  If there were no errors,
+warnings, or crashes, then the successful call is added to the list of
+successful calls \emph{succs} and iteration continues until the
+budget is exhausted.
 
 \input{code-and-figures/approach-algorithms.tex}
 
 \section{Assessment}
 \label{sec:assessment}
 
-We used \tool to stress-test one of the proposed type system designs for R~\cite{turcotte2020designing}.
-The type system was designed empirically, with the help of a dynamic program analysis that inferred function signatures from the types of values observed while running extracted code from R packages.
-In a nutshell, a type was inferred from each call to a function, and these types were unified into a single function type, and the more unique successful calls there are, the more precise the inferred signature---the types inferred from successful calls are referred to as \textit{call signatures}.
-It would be therefore interesting to see \emph{how many additional successful calls can \tool generates?}
+We used \tool to stress-test one of the proposed type system for
+R~\cite{turcotte2020designing}.  The type system was designed
+empirically, with the help of a dynamic analysis that inferred
+function signatures from the types of values observed while running
+extracted code from packages.  In a nutshell, a type was inferred from
+each call to a function, and these types were unified into a single
+function type, and the more unique successful calls there are, the
+more precise the inferred signature---the types inferred from
+successful calls are referred to as \textit{call signatures}.  It
+would be therefore interesting to see \emph{how many additional
+successful calls can \tool generates?}
 
-We ran all of our experiments on two Ubuntu 18.04 servers, each with a 72 core Intel Xeon 6140 2.30GHz processor and 256GB of RAM.
+We ran all of our experiments on two Ubuntu 18.04 servers, each with a
+72 core Intel Xeon 6140 2.30GHz processor and 256GB of RAM.
 
 \paragraph{Recording}
 
-First, we created a \sxpdb for the fuzzer.
-For this we used the extracted runnable code from the same corpus as the original study which consists of \DBNumSourceFiles R scripts containing \DBSourceLinesOfCodeRnd lines of code (excluding comments and new lines).
-The database was generated in 16 hours and occupies \DBFileSize of disk space.
-It contains \DBValuesRnd unique values recorded from \DBNumCallsRnd calls to \DBNumFunctionsRnd functions in \DBNumPackages packages.
-Figure~\ref{fig:argsdb-value-distribution} shows the distribution of main value types.
-The vast majority of values are vectors and matrices of real numbers which is unsurprising as R is mostly used for numerical computing.
-That said, many of them, 47.2\%  contain \textit{attributes} which is what makes them interesting, as attributes add semantic meaning.
-The next big group are lists, which can be divided into two groups, data frames (two dimensional, column-major structure representing observations) and records.
+First, we created a \sxpdb for the fuzzer.  For this we used the
+extracted runnable code from the same corpus as the original study
+which consists of \DBNumSourceFiles R scripts containing
+\DBSourceLinesOfCodeRnd lines of code (excluding comments and new
+lines).  The database was generated in 16 hours and occupies
+\DBFileSize of disk space.  It contains \DBValuesRnd unique values
+recorded from \DBNumCallsRnd calls to \DBNumFunctionsRnd functions in
+\DBNumPackages packages.  Figure~\ref{fig:argsdb-value-distribution}
+shows the distribution of main value types.  The vast majority of
+values are vectors and matrices of real numbers which is unsurprising
+as R is mostly used for numerical computing.  That said, many of them,
+47.2\% contain \textit{attributes} which is what makes them
+interesting, as attributes add semantic meaning.  The next big group
+are lists, which can be divided into two groups, data frames (two
+dimensional, column-major structure representing observations) and
+records.
 
 \begin{figure}
     \centering
@@ -383,8 +403,7 @@ The reason that \tool failed to generate a single successful call for \UFNumMiss
 As an example of the latter case, certain functions from the {\tt dplyr} data manipulation package required a data frame alongside an unevaluated expression made up of column names from the data frame. 
 The functions that use non-standard scoping, manipulating arguments as unevaluated expressions and evaluating them in custom environments, are problematic.
 In some cases the error message could have been used as a feedback to the fuzzer (and we plan to address it in the next iteration), but this is not easy to generalize.
-% During fuzzing, we recorded \UFNumErrorMessagesRnd distinct errors and the vast majority are user-defined errors that only make sense in particular context.
-% Another issue is with functions that use non-standard scoping, the R ability to allow functions to capture unevaluated expression passed to its arguments and evaluate it in custom environment.
+
 
 Next, we looked on the code coverage to see if the new call signatures exercise new code in comparison to tracing.
 Using the \code{covr} package\footnote{The only tool for R code coverage, \Cf~\url{https://covr.r-lib.org}}, we computed line coverage of R source code for \UFNumFunctionsWithBothCoverage functions using the fuzzed calls, and separately using the traced calls.
@@ -416,9 +435,6 @@ We implement this approach in a tool called \tool for the R programming language
 While this approach was implemented in a tool for R, it is broadly applicable in all languages, and the only real language-specific aspect is the set of parameters in the database.
 For instance, one could implement a similar tool for object-oriented languages, where database metadata could include object field names (\Eg, JavaScript).
 
-%%
-%% The next two lines define the bibliography style to be used, and
-%% the bibliography file.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{fuzzing}
 
