@@ -1,11 +1,11 @@
 \begin{algorithm}
-\caption{Selecting Arguments for New Call}\label{alg:arg-sel}
+\caption{Selecting Arguments for A Call}\label{alg:arg-sel}
 \begin{algorithmic}[1]
-\Procedure{getNewArgs}{$f,numRelax,db,succs$}
-\State{$params \gets getParameters(f)$}
+\Procedure{getArgs}{$f,numRelax,db,succs$}
+\State{$params \gets getParams(f)$}
 \For{$p$ in $params$}
-\LineComment{relax on $numRelax$ parameters}
-\State{$relax \gets pickSome(relaxParameters, numRelax)$}
+\LineComment{relax on $numRelax$ params}
+\State{$relax \gets pickSome(relaxParams, numRelax)$}
 \LineComment{get all values that $p$ had in successful calls to $f$}
 \State{$seed \gets getArgsFor(p, succs)$}
 \LineComment{choose one at random}
@@ -23,15 +23,15 @@
 \begin{algorithmic}[1]
 \Procedure{fuzzWithDB}{$f,db,budget$}
 \State $succs \gets getSuccessfulCalls(f, db)$
-\State $tick \gets budget / numRelaxParameters$
-\State $relaxThisTime \gets numRelaxParameters$
+\State $tick \gets budget / numRelaxParams$
+\State $relaxThisTime \gets numRelaxParams$
 \State $i\gets 1$
 \While{$i\not=budget$}
-\LineComment{gradually relax on fewer parameters}
+\LineComment{gradually relax on fewer params}
 \If{$i \bmod tick = 0$}
 \State $relaxThisTime \gets relaxThisTime - 1$
 \EndIf
-\State{$args \gets getNewArgs(f,relaxThisTime, db, succs)$}
+\State{$args \gets getArgs(f,relaxThisTime, db, succs)$}
 \State{$res \gets call(f, args)$}
 \LineComment{add successful call to $succs$}
 \If{no warnings, errors, crashes in $res$}
