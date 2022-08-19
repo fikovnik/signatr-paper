@@ -56,7 +56,7 @@ popular and has seen widespread adoption, primarily to find bugs,
 performance pathologies, and security vulnerabilities.  However,
 dynamically languages such as Python, JavaScript, and R pose unique
 challenges that revolve around the idea that \textit{dynamic code
-  tends hide runtime errors}.  For instance, accessing a non-existent
+  tends to hide runtime errors}.  For instance, accessing a non-existent
 field of an object in JavaScript yields the value {\tt undefined}
 instead of crashing, and basic functions in R will readily coerce
 values whose types do not match.  A tool that tries to run code
@@ -108,7 +108,7 @@ Java~\cite{pacheco2007randoop}.  Essentially, sequences of method
 calls are generated to test classes, and arguments are randomly
 generated for these calls. For primitive values, a random value is
 selected from a predefined, but user-extensible list; for reference
-types a value is selected at random from those which have been seen,
+types, a value is selected at random from those which have been seen,
 and if none are available then {\tt null} is selected.  While this
 technique is effective at generating tests involving non-trivial
 objects that are built up from a number of method calls, data science
@@ -132,7 +132,7 @@ tooling~\cite{morandat2012evaluating}.  Challenges include:
 
 \begin{compactitem}[$-$]
 \item The lack of type annotations or static type system; so there is
-  little to suggest what are expected arguments or return values.
+  little to suggest what expected arguments or return values are.
 \item Primitive values (booleans, integers, ...)  have a separate
   ``NA'' value indicating that data is ``not available''.
 \item Values are automatically and silently coerced across types.
@@ -192,16 +192,16 @@ various runtime events~\cite{goel2019}.  Users can also plug their own
 dynamic analysis directly into the pipeline.
 
 Since R can crash (and does), to avoid losing results each instance
-of the fuzzer consists of two processes. A worker that fuzzes, and a
+of the fuzzer consists of two processes: a worker that fuzzes, and a
 supervisor that can spawn workers if neeeded.  Furthermore, the fuzzer
 runs isolated in a container as calling arbitrary code could have dire
 consequences.
 
-The tool iteself consists of three standalone components: \code{argtracer},
+The tool itself consists of three standalone components: \code{argtracer},
 the tracer responsible for running code and recording function
 invocation, \code{sxpdb}, the value database, and finally \code{generatr}, the
 fuzzer responsible for generating inputs. They are R
-packages written in combination of R and C++.
+packages written in a combination of R and C++.
 
 \begin{figure}
     \centering
@@ -217,7 +217,7 @@ packages written in combination of R and C++.
 
 \subsection{Tracer}\label{sec:argtracer}
 
-The tracer is built on top of aforementioned extended virtual machine.
+The tracer is built on top of the aforementioned extended virtual machine.
 The two runtime events we use are function exit, where all arguments are
 captured and stored, and a context jump, which is necessary to keep
 the call stack healthy as the interpreter uses long jumps for loop
@@ -252,21 +252,21 @@ uniqueness in combination with a hashtable based on RobinHood
 hashing\footnote{\url{cyan4973.github.io/xxHash},
 \url{github.com/martinus/robin-hood-hashing}}.  While the hashing is
 fast, we need to lower R values into a binary format.  R provides a
-binary serialization XDR, but it is
-costly\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}.
+binary serialization XDR,\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}} but it is
+costly.
 We also strip the serialization of sources of non-determinism related
 to character encodings.  Since many values are pushed to the database
 in an average recording session, we try to avoid serialization as much
-as possible.  For this we use the \code{trace} bit that is part of
-each value\footnote{A bit in the C struct that represents a value,
-\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}.}.
+as possible.  For this, we use the \code{trace} bit that is part of
+each value.\footnote{A bit in the C struct that represents a value,
+	\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}.}
 If not set, the value is fresh and we serialize it, compute its hash,
 store it. The trace bit is then set to avoid repeated serialization.
 In spite of R's copy-on-write semantics, values can be modified in
 place before being shared, and these values may be serialized repeatedly
 to capture the updates performed by the program.
 
-The database also store metadata about values and their origin.  We
+The database also stores metadata about values and their origin.  We
 also keep a unique id for each sequence of arguments coming from the
 same call site. This allows us to replay the calls as they were
 observed.
