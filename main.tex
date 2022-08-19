@@ -239,22 +239,32 @@ C++ code.
 
 \subsection{Database of Values}\label{sec:sxpdb}
 
-The database is hand-written in order to (1) leverage some
-domain-knowledge of R values and store them efficiently, and (2)
-optimize it for the types of queries supported by the query API.  It
-is implemented in C++ with an R API (in 5K lines of C++ code and 1.5K
-lines of R code).
+The database is hand-written in order to leverage domain-knowledge of
+R values, and optimize it for the queries supported by our API.  It is
+implemented in 5K lines of C++ and 1.5K lines of R code.
 
 \paragraph{Storage}
 
-The database stores only unique values.
-We use XXH128, a 128bit hashing algorithm\footnote{Fast non-cryptographic hash algorithm, \Cf \url{https://cyan4973.github.io/xxHash/}} for uniqueness, in combination with a hashtable based on RobinHood hashing\footnote{\url{https://github.com/martinus/robin-hood-hashing}}.
-While the hashing is fast, it works on an array of bytes so we need to lower R values into a binary format.
-R provides a binary serialization format XDR\footnote{\Cf \url{https://cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}, but it is costly. We also need to strip the serialization of sources of non-determinism related to character encoding.
-Since there is a large number of values being pushed to the database in an average recording session, we try to avoid the serialization as much as possible.
-For this we use the \emph{trace} bit that is part of the R value header\footnote{A bit in the \code{SEXP} C struct that represents R value. \Cf \url{https://cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}}.
-If it is not set, then it is a fresh value so we serialize it, compute its hash, store it into the database and set the trace bit.
-If it is set, we have seen it before, but in spite of R's copy-on-write semantics, values can actually be modified in place until they are aliased, thus we need to check whether or not a value has been shared, and if not then we serialize and check its presence using the hash.
+The database stores unique values.  We use \sc{xxh128} hashing for
+uniqueness, in combination with a hashtable based on RobinHood
+hashing\footnote{\url{cyan4973.github.io/xxHash},
+\url{github.com/martinus/robin-hood-hashing}}.  While the hashing is
+fast, we need to lower R values into a binary format.  R provides a
+binary serialization XDR, but it is
+costly.\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}
+We also strip the serialization of sources of non-determinism related
+to character encodings.  Since there is a large number of values being
+pushed to the database in an average recording session, we try to
+avoid the serialization as much as possible.  For this we use the
+\emph{trace} bit that is part of the R value header\footnote{A bit in
+the \code{SEXP} C struct that represents R value.
+\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}}.
+If it is not set, then it is a fresh value so we serialize it, compute
+its hash, store it into the database and set the trace bit.  If it is
+set, we have seen it before, but in spite of R's copy-on-write
+semantics, values can actually be modified in place until they are
+aliased, thus we need to check whether or not a value has been shared,
+and if not then we serialize and check its presence using the hash.
 
 
 Next to the value itself, the database also store metadata about the value and its origin (the package, function and argument name).
@@ -284,32 +294,43 @@ be used to filter desired values.
 
 \subsection{Fuzzing Technique}
 
-The database of values is at the core of the fuzzing approach, which is similar in spirit to mutation-based fuzzing (where instead of mutating arguments to previous calls, new argument values are selected based on previous ones).
+The database of values is at the core of the fuzzing approach, which
+is similar in spirit to mutation-based fuzzing (where instead of
+mutating arguments to previous calls, new argument values are selected
+based on previous ones).
 
-The core of fuzzing is to generate new calls to a function $f$, and the process of choosing arguments to construct these calls is depicted in Algorithm~\ref{alg:arg-sel}.
-In addition to the function $f$ and value database $db$, the algorithm considers how many query parameters to relax on ($numRelax$), as well as all of the previously seen successful calls to $f$ ($succs$).
-For each parameter $p$ of $f$, the algorithm determines which parameters to relax on (this may change from one iteration to the next), finds all values that inhabited $p$ in successful calls to $f$, chooses one such value $v$, and queries the database for a value similar to $v$ in all respects, save for the parameters that are being relaxed this time.
-Note: if no successful calls to the function have been observed, random values for parameters can be chosen.
+The core of fuzzing is to generate new calls to a function $f$, and
+the process of choosing arguments to construct these calls is depicted
+in Algorithm~\ref{alg:arg-sel}.  In addition to the function $f$ and
+value database $db$, the algorithm considers how many query parameters
+to relax on ($numRelax$), as well as all of the previously seen
+successful calls to $f$ ($succs$).  For each parameter $p$ of $f$, the
+algorithm determines which parameters to relax on (this may change
+from one iteration to the next), finds all values that inhabited $p$
+in successful calls to $f$, chooses one such value $v$, and queries
+the database for a value similar to $v$ in all respects, save for the
+parameters that are being relaxed this time.  Note: if no successful
+calls to the function have been observed, random values for parameters
+can be chosen.
 
 The fuzzing approach itself is depicted in Algorithm~\ref{alg:fuzzer}.
-First, the collection of already known successful calls to $f$ is obtained from the database $db$.
-The main idea of the approach is to start by selecting new arguments essentially at random by querying the database and relaxing on many parameters, and gradually reduce the number of parameters being relaxed as the fuzzer progresses.
-Concretely, the number of parameters being relaxed is reduced every $tick$, which is determined by dividing the total fuzzing budget by the number of parameters that can be relaxed ($numRelaxParameters$).
-The function $f$ will be fuzzed for as long as the budget allows, and initially all database parameters will be relaxed.
-Arguments for a new call to $f$ are generated through the approach depicted in Algorithm~\ref{alg:arg-sel} ($getNewArgs$), the call is performed, and the results are saved in $res$.
-If there were no errors, warnings, or crashes, then the successful call is added to the list of successful calls $succs$, and iteration continues until the budget is exhausted.
+First, the collection of already known successful calls to $f$ is
+obtained from the database $db$.  The main idea of the approach is to
+start by selecting new arguments essentially at random by querying the
+database and relaxing on many parameters, and gradually reduce the
+number of parameters being relaxed as the fuzzer progresses.
+Concretely, the number of parameters being relaxed is reduced every
+$tick$, which is determined by dividing the total fuzzing budget by
+the number of parameters that can be relaxed ($numRelaxParams$).
+The function $f$ will be fuzzed for as long as the budget allows, and
+initially all database parameters will be relaxed.  Arguments for a
+new call to $f$ are generated through the approach depicted in
+Algorithm~\ref{alg:arg-sel} ($getArgs$), the call is performed, and
+the results are saved in $res$.  If there were no errors, warnings, or
+crashes, then the successful call is added to the list of successful
+calls $succs$, and iteration continues until the budget is exhausted.
 
 \input{code-and-figures/approach-algorithms.tex}
-
-% \subsection{Use Case: Typing Successful Traces}
-%
-% To help show that this fuzzing approach uncovers interesting calls, we inferred types from the resulting successful calls $succs$.
-% As R has no static type system, we use the type system proposed by Turcotte et al.~\cite{turcotte2020designing} by utilizing their {\tt contractr} type inference tool.
-% % This is the stage where a user can define their type system, which is input as two functions: one to infer the type of some value $v$, and another to take two types $t_1$ and $t_2$ and judge whether or not they can be simplified (e.g., determine if $t_1$ is a subtype of $t_2$, $t_1 <: t_2$).
-% This helps determine the set of \textit{unique} call signatures for a function, as two calls with different values that have the same type can be collapsed at this stage.
-% For example, say the identity function {\tt id} was called with {\tt 4} and {\tt 2}; the types of each of those calls is $int \rightarrow int$, and so they would be collapsed together. 
-%
-% The fuzzing approach is implemented in a tool called \tool, written in R and C++, and is available as an R package.
 
 \section{Assessment}
 \label{sec:assessment}
