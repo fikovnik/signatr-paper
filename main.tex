@@ -191,16 +191,16 @@ extended R virtual machine that supports attaching callbacks to
 various runtime events~\cite{goel2019}.  Users can also plug their own
 dynamic analysis directly into the pipeline.
 
-Since R can crash (and does), to avoid loosing results, each instance
+Since R can crash (and does), to avoid losing results each instance
 of the fuzzer consists of two processes. A worker that fuzzes, and a
 supervisor that can spawn workers if neeeded.  Furthermore, the fuzzer
 runs isolated in a container as calling arbitrary code could have dire
 consequences.
 
-The tool consists of three standalone components: \code{argtracer},
+The tool iteself consists of three standalone components: \code{argtracer},
 the tracer responsible for running code and recording function
-invocation, \code{sxpdb}, the value database, and \code{generatr}, the
-fuzzer responsible for generating inputs.  Technically, they are R
+invocation, \code{sxpdb}, the value database, and finally \code{generatr}, the
+fuzzer responsible for generating inputs. They are R
 packages written in combination of R and C++.
 
 \begin{figure}
@@ -220,12 +220,12 @@ packages written in combination of R and C++.
 The tracer is built on top of aforementioned extended virtual machine.
 The two runtime events we use are function exit, where all arguments are
 captured and stored, and a context jump, which is necessary to keep
-the call stack healthy as the interpreter uses long jumps for loops
-control flow, return statements and error handling.  On a long jump,
-the exit hook is ignored. To capture all function exits, we thus maintain
-our version of the call stack.
+the call stack healthy as the interpreter uses long jumps for loop
+control flow, return statements, and error handling.  (On a long jump,
+the exit hook is ignored, so we maintain our own version of the call stack
+to capture all function exits.)
 
-When the tracer sees a call, it only sees a pointer to a closure.  The
+When the tracer sees a call, it only sees a pointer to a closure, and the
 function's name and its package can only be found by searching through
 the loaded namespaces and the symbols they contain.  Because of this,
 the tracer eagerly builds an index of package and function names when
@@ -235,7 +235,7 @@ Regarding performance, there is \TRMinTracingOverhead ---
 \TRMaxTracingOverhead (\TRAvgTracingOverhead on average) slowdown when
 running with tracing enabled (based on the running / tracing
 \TRTracingFiles R scripts recording 8M unique values of 3GB size).
-This is due to the value serialization.  The tracer is written in 600 lines of
+This cost is mostly due to the value serialization.  The tracer is written in 600 lines of
 C++ code.
 
 \subsection{Database of Values}\label{sec:sxpdb}
@@ -247,23 +247,23 @@ implemented in 5K lines of C++ and 1.5K lines of R code.
 \paragraph{Storage}
 
 
-The database stores unique values.  We use XXH128 hashes for
+The database stores unique values.  We use XXH\-128 hashes for
 uniqueness in combination with a hashtable based on RobinHood
 hashing\footnote{\url{cyan4973.github.io/xxHash},
 \url{github.com/martinus/robin-hood-hashing}}.  While the hashing is
 fast, we need to lower R values into a binary format.  R provides a
 binary serialization XDR, but it is
-costly.\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}
+costly\footnote{\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Serialization-Formats}}.
 We also strip the serialization of sources of non-determinism related
 to character encodings.  Since many values are pushed to the database
 in an average recording session, we try to avoid serialization as much
 as possible.  For this we use the \code{trace} bit that is part of
-each value.\footnote{A bit in the C struct that represents a value,
-\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}.}
+each value\footnote{A bit in the C struct that represents a value,
+\url{cran.r-project.org/doc/manuals/r-release/R-ints.html\#Rest-of-header}.}.
 If not set, the value is fresh and we serialize it, compute its hash,
 store it. The trace bit is then set to avoid repeated serialization.
 In spite of R's copy-on-write semantics, values can be modified in
-place before being shared, these values may be serialized repeatedly
+place before being shared, and these values may be serialized repeatedly
 to capture the updates performed by the program.
 
 The database also store metadata about values and their origin.  We
@@ -291,11 +291,11 @@ query larger-than-memory databases.
 \paragraph{Queries}
 
 Values can be queried based on their {\tt typeof}-type or class, on
-the presence of NAs, number of attributes, dimensions.  The database
-can be queried for a random value with the desired metadata (e.g., a
+the presence of NAs, number of attributes, and dimensions.  The database
+can be queried for a random value with the desired metadata (e.g., query for a
 vector of integers of length 10), or can be queried by providing an
 existing value along with a list of search parameters to be relaxed
-(e.g., query the database for a value similar to {\tt 42}, but relax
+(e.g., query for a value similar to {\tt 42}, but relax
 on the length).  A custom predicate can also be used to filter
 returned values.
 
@@ -306,20 +306,20 @@ similar in spirit to mutation-based fuzzing. Instead of mutating
 arguments to previous calls, new argument values are selected based on
 previous ones.
 
-The fuzzer generates calls to a function and chooses arguments these
+The fuzzer generates calls to a function and chooses arguments to these
 calls as depicted in Algorithm~\ref{alg:arg-sel}.  In addition to the
 target function and database, the algorithm considers how many query
 parameters to relax on (\emph{numRelax}), as well as all of the
 previously seen successful calls to the function (\emph{succs}).
 For each parameter, the algorithm determines how to relax (this may
 change from one iteration to the next), finds all values that
-inhabited that parameter in successful calls, chooses one value , and
+inhabited that parameter in successful calls, chooses one value, and
 queries the database for a value similar to it save for the
 relaxation.  If no successful calls to the function have been
 observed, random values can be chosen.
 
 The fuzzing approach itself is depicted in Algorithm~\ref{alg:fuzzer}.
-First, the collection of already known calls to function is obtained
+First, the collection of already known calls to the function is obtained
 from the database.  The main idea of the approach is to start by
 selecting new arguments essentially at random by querying the database
 and relaxing on many parameters, and gradually reduce the number of
@@ -352,7 +352,7 @@ function type, and the more unique successful calls there are, the
 more precise the inferred signature---the types inferred from
 successful calls are referred to as \textit{call signatures}.  It
 would be therefore interesting to see \emph{how many additional
-successful calls can \tool generates?}
+successful calls can \tool generate?}
 
 We ran all of our experiments on two Ubuntu 18.04 servers, each with a
 72 core Intel Xeon 6140 2.30GHz processor and 256GB of RAM.
