@@ -443,12 +443,12 @@ For instance, one could implement a similar tool for object-oriented languages, 
     numbers=none,
 }
 
-The following is a short demonstration of the basic \tool functionality, \Ie how to create the value database by running R code and then how to use it for fuzzing.
+The following is a short demonstration of the basic \tool functionality, \Ie, how to create the value database by running R code and then how to use it for fuzzing.
 The tool is packaged as an R library.
-It can be used both in a script or interactively from R REPL.
+It can be used both in a script or interactively from an R REPL.
 
-We begin by starting R (concretely R-dyntrace version 4.0.2) and loading the \tool.
-In the following listings, the \code{$} indicates shell prompt and \code{>} denotes the R REPL.
+We begin by starting R (concretely, \emph{R-dyntrace} version 4.0.2 which has the hooks used by the \emph{argtracer}) and loading \tool.
+In the following listings, the \code{\$} indicates shell prompt and \code{>} denotes the R REPL.
 
 \begin{lstlisting}
 $ R
@@ -468,8 +468,7 @@ One way to get it is to extract it from an existing R package, for example \code
 ...
 \end{lstlisting}
 
-This will extract all the runnable snippets from the package documentation as
-well as tests into the given directory.
+This will extract all the runnable snippets from the package documentation and tests into the given directory.
 For example:
 
 \begin{lstlisting}
@@ -481,7 +480,7 @@ str_detect(fruit, "^a")
 ...
 \end{lstlisting}
 
-Next, we trace the file, \Ie, we execute it and record all the calls using the \code{trace_file} function:
+Next, we trace the file by executing it and recording all the calls using the \code{trace_file} function:
 
 \begin{lstlisting}
 > trace_file("demo/examples/str_detect.Rd.R", db_path = "demo.sxpdb")
@@ -489,14 +488,14 @@ Next, we trace the file, \Ie, we execute it and record all the calls using the \
          0  0.024        20      NA
 \end{lstlisting}
 
-The result is stored in the \code{demo.sxpdb} database. Concretely, after
-running the \code{str_detect.Rd.R} file, it contains 20 unique values. This can
-be repeated done for all the other files. To trace multiple files in parallel, we
-record each file into its own database and then merge them together using \code{merge_dbs} function.
+The resulting database is stored as \code{demo.sxpdb}. 
+In this example, after running the \code{str_detect.Rd.R} file, the database contains 20 unique values. 
+This can be repeated for all the other files. 
+To trace multiple files in parallel, one database is created per file, which are merged using the \code{merge_dbs} function once they are all available.
 This also allows us to run larger experiments on multiple machines.
 
-With the database ready, we can start fuzzing.
-The fuzzer has a number of configration points, but the easiest is to use \code{quick_fuzz} helper function:
+Once the database is ready, we can start fuzzing.
+The fuzzer has a number of configration points, but the easiest starting point is the \code{quick_fuzz} helper function:
 
 \begin{lstlisting}
 > R <- quick_fuzz("stringr::str_detect", "demo.sxpdb", budget = 100, 
@@ -507,9 +506,11 @@ The fuzzer has a number of configration points, but the easiest is to use \code{
   stopped runner:PROCESS 'R', running, pid 4157
 \end{lstlisting}
 
-The \code{infer_call_signature} is \tool function that uses infers type for each call argument and return value using the type system proposed in Turcotte et al.~\cite{turcotte2020designing}.
-The result depends on the action, but in general, it is a data frame with the details of each of the call.
-In this case, the data frame includes the inferred call signature in the \code{result} column added there by the \code{infer_call_signature} function.
+The \code{infer_call_signature} function infers types for each call argument and return value using the type annotation language proposed in Turcotte et al.~\cite{turcotte2020designing}.
+(Specifically, the \emph{contractr} type inference tool provided by the work is used.)
+\code{infer_call_signature} returns a data frame with details for each call.
+% The result depends on the action, but in general, it is a data frame with the details of each of the call.
+In this case, the data frame includes the inferred call signature in the \code{result} column. % added there by the \code{infer_call_signature} function.
 
 \begin{lstlisting}
 > print(R)
@@ -521,10 +522,10 @@ In this case, the data frame includes the inferred call signature in the \code{r
 ...
 \end{lstlisting}
 
-The above listing shows two calls, a failed one (non-zero status) with an error message, and a successful one with an inferred signature.
-The \code{args_idx} contains the indices of the values used from the \sxpdb.
+The above listing shows two calls: a failed one (non-zero status) with an error message, and a successful one with an inferred signature.
+The \texttt{args\_idx} column contains the indices in the \sxpdb of the values; thus, the actual argument values can be obtained by looking up the {\tt args\_idx} in the \sxpdb.
 
-The advantage of being in R is that we can now use all the regular R functions to explore the data.
+One advantage of using R is that we can use R's many data analysis functions.
 For example, we can look at the resulting signatures:
 
 \begin{lstlisting}
@@ -538,7 +539,8 @@ For example, we can look at the resulting signatures:
 4 NA                                                               97
 \end{lstlisting}
 
-This shows that in three cases, the fuzzer managed to generate a call that was successful.
+This shows that in three cases, the fuzzer managed to generate a call that was successful, and the signatures of those calls.
+(If you are repeating these steps, it is possible that your results will be different since fuzzing is non-deterministic.)
 
 \end{document}
 \endinput
