@@ -423,9 +423,11 @@ Together, existing and generated calls yields a wealth of interesting, runnable 
 \section{Conclusions and Future Work}
 \label{sec:conclusions}
 
-Fuzz testing is an incredibly useful technique for finding bugs and security vulnerabilities in code, but is hindered by the permissive semantics of dynamic languages as well as the dynamic nature of how complex data is defined.
+Fuzzing is a useful technique not only for finding bugs and security vulnerabilities, but also for getting insights about code.
+However, it is hindered by the permissive semantics of dynamic languages as well as the dynamic nature of how complex data is defined.
 In this work, we proposed a fuzzing approach that relies on a database of observed values to provide complex and realistic inputs for functions.
-We implement this approach in a tool called \tool for the R programming language, and show that \tool uncovers many new and interesting call signatures for R functions.
+We implement this approach in a tool called \tool for the R programming language.
+We show that \tool uncovers many new call signatures for R functions and it can be a useful tool in a data-driven language evolution toolbox.
 
 While this approach was implemented in a tool for R, it is broadly applicable in all languages, and the only real language-specific aspect is the set of parameters in the database.
 For instance, one could implement a similar tool for object-oriented languages, where database metadata could include object field names (\Eg, JavaScript).
