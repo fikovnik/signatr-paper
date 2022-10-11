@@ -54,7 +54,7 @@ To increase coverage, one could make use of a \textit{fuzzer}, a tool
 that exercises code by generating random inputs.  Fuzz testing is
 popular and has seen widespread adoption, primarily to find bugs,
 performance pathologies, and security vulnerabilities.  However,
-dynamically languages such as Python, JavaScript, and R pose unique
+dynamically typed languages such as Python, JavaScript, and R pose unique
 challenges that revolve around the idea that \textit{dynamic code
   tends to hide runtime errors}.  For instance, accessing a non-existent
 field of an object in JavaScript yields the value {\tt undefined}
@@ -67,7 +67,7 @@ types leaves fuzzers with very little information about what values
 are expected to begin with. Finally, it is difficult to generate complex
 values automatically in dynamically typed languages; in a statically typed language like Java, the
 shapes of user-defined objects can be inferred from a static class
-definition. In contract, there is no such guide in dynamic languages, limiting
+definition. In contrast, there is no such guide in dynamic languages, limiting
 a fuzzer's ability to generate realistic inputs.
 
 To get around this, we propose an approach to fuzzing that relies on
@@ -102,7 +102,7 @@ used here.
 
 \paragraph{Related Work}
 We explore an approach to fuzzing where no input is required from the
-programmer.  Out of the many fuzzers, we have experience with Randoop,
+programmer. One of the earliest fuzzers is Randoop,
 a feedback-driven random test generation tool for
 Java~\cite{pacheco2007randoop}.  Essentially, sequences of method
 calls are generated to test classes, and arguments are randomly
@@ -120,9 +120,8 @@ usefulness of such approaches. American Fuzzy Lop (AFL) is a
 state-of-the-art industrial fuzzer~\cite{afl}. AFL takes a program and
 one example file as input, calls the program with the input, and then
 uses a variety of heuristics to transform the input and fuzz the
-program.  AFL aims to find defects, looking for edge cases.  Our
-approach on the other hand looks for calls that do not crash, and
-discovers new acceptable inputs.
+program.  AFL aims to find defects, looking for edge cases, while our approach
+aims to find novel inputs that successfully execute.
 
 \paragraph{The R Programming Language}
 
@@ -170,12 +169,16 @@ This is pictured in Figures~\ref{fig:sxpdb-pipeline} and
 \ref{fig:fuzz-pipeline} for the recording and fuzzing phases
 respectively.
 
-For the recording phase, runnable code is extracted from examples and
-tests in packages.  This runnable code consists of a set of scripts
+For the recording phase, runnable code is extracted from examples and tests in packages.  
+This runnable code consists of a set of scripts
 that can be run independently. Next, the scripts are
 executed in parallel, and all arguments are recorded into separate instances of
 our database, called the \sxpdb.  Finally, all the database instances
-are merged into one, in the process duplicate values are discarded. GNU parallel is used for orchestration~\cite{tange2011_parallel}.
+are merged into one, in the process duplicate values are discarded. 
+GNU parallel is used for orchestration~\cite{tange2011_parallel}.
+Every R package hosted on R's main package repository (called CRAN) 
+is required to have runnable example scripts to show how the package 
+should be used, so there is a lot of code available.
 
 As for the fuzzing phase, a list of functions to fuzz as well as a
 \sxpdb are taken as input. The functions are fuzzed in parallel.  The
@@ -220,16 +223,16 @@ packages written in a combination of R and C++.
 The tracer is built on top of the aforementioned extended virtual machine.
 The two runtime events we use are function exit, where all arguments are
 captured and stored, and a context jump, which is necessary to keep
-the call stack healthy as the interpreter uses long jumps for loop
+the call stack balanced as the interpreter uses long jumps for loop
 control flow, return statements, and error handling.  (On a long jump,
 the exit hook is ignored, so we maintain our own version of the call stack
 to capture all function exits.)
 
 When the tracer sees a call, it only sees a pointer to a closure, and the
 function's name and its package can only be found by searching through
-the loaded namespaces and the symbols they contain.  Because of this,
+the loaded name\-spaces and the symbols they contain.  Because of this,
 the tracer eagerly builds an index of package and function names when
-namespace functions are loaded.
+name\-space functions are loaded.
 
 Regarding performance, there is \TRMinTracingOverhead ---
 \TRMaxTracingOverhead (\TRAvgTracingOverhead on average) slowdown when
@@ -302,9 +305,10 @@ returned values.
 \subsection{Fuzzing}
 
 The value database is at the core of our fuzzing approach, which is
-similar in spirit to mutation-based fuzzing. Instead of mutating
-arguments to previous calls, new argument values are selected based on
-previous ones.
+similar in spirit to mutation-based fuzzing, where valid inputs are taken 
+and mutated to try to exercise new functionality (rather than have inputs 
+be randomly generated). Instead of mutating arguments to previous calls, 
+new argument values are selected based on previous ones.
 
 The fuzzer generates calls to a function and chooses arguments to these
 calls as depicted in Algorithm~\ref{alg:arg-sel}.  In addition to the
@@ -367,7 +371,7 @@ Figure~\ref{fig:argsdb-value-distribution} shows the distribution of main value 
 The vast majority of values are vectors and matrices of real numbers which is unsurprising as R is mostly used for numerical computing.
 That said, many of them (47.2\%) contain attributes which is what makes them interesting, as attributes add semantic meaning.
 The next big group are lists, which can be divided into two groups, data frames (two dimensional, column-major structure representing observations) and records.
-
+Note that 0.5\% are logical \textit{vectors} of varying length, not simply {\tt true} or {\tt false}. 
 
 \begin{figure}
     \centering
@@ -403,7 +407,7 @@ In some cases the error message could have been used as a feedback to the fuzzer
 Next, we looked at code coverage to see if the new call signatures translated to more code being exercised. 
 Using the \code{covr} package\footnote{The only tool for R code coverage, \Cf~\url{https://covr.r-lib.org}}, we computed line coverage of R source code for \UFNumFunctionsWithBothCoverage functions using the fuzzed calls, and separately using the traced calls.
 This is not all of the functions that \tool managed to fuzz, as running \code{covr} on some functions caused runtime errors, and also repeating certain calls failed (both fuzzed and traced).
-For \UFBetterCoverage functions, \tool improved code coverage on average by \UFBetterCoverageMean.
+For \UFBetterCoverage functions, \tool improved code coverage on average by \UFBetterCoverageMean (as compared with coverage obtained by simply running package tests, examples, and vignettes).
 This suggests that most of the new call signatures do not exercise new code paths, but instead point to extensive polymorphism of R functions caused by both genericity and the implicit value coercion. 
 
 \paragraph{Summary}
