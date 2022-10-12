@@ -503,15 +503,15 @@ Once the database is ready, we can start fuzzing.
 The fuzzer has a number of configration points, but the easiest starting point is the \code{quick_fuzz} helper function:
 
 \begin{lstlisting}
-> R <- quick_fuzz("stringr::str_detect", "demo.sxpdb", budget = 100, 
-                    action = infer_call_signature)
+> R <- R <- quick_fuzz("stringr", "str_detect", "demo.sxpdb",
+		 budget = 100, action = "infer")
 
   started a new runner:PROCESS 'R', running, pid 4157
   fuzzing stringr:::str_detect [======] 100/100 (100%) 39s
   stopped runner:PROCESS 'R', running, pid 4157
 \end{lstlisting}
 
-The \code{infer_call_signature} function infers types for each call argument and return value using the type annotation language proposed in Turcotte et al.~\cite{turcotte2020designing}.
+The \code{infer} action will use the \code{infer_call_signature} function that infers types for each call argument and return value using the type annotation language proposed in Turcotte et al.~\cite{turcotte2020designing}.
 (Specifically, the \emph{contractr} type inference tool provided by the work is used.)
 \code{infer_call_signature} returns a data frame with details for each call.
 % The result depends on the action, but in general, it is a data frame with the details of each of the call.
