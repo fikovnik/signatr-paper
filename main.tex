@@ -503,7 +503,7 @@ Once the database is ready, we can start fuzzing.
 The fuzzer has a number of configration points, but the easiest starting point is the \code{quick_fuzz} helper function:
 
 \begin{lstlisting}
-> R <- R <- quick_fuzz("stringr", "str_detect", "demo.sxpdb",
+> R <- quick_fuzz("stringr", "str_detect", "demo.sxpdb",
 		 budget = 100, action = "infer")
 
   started a new runner:PROCESS 'R', running, pid 4157
@@ -511,7 +511,7 @@ The fuzzer has a number of configration points, but the easiest starting point i
   stopped runner:PROCESS 'R', running, pid 4157
 \end{lstlisting}
 
-The \code{infer} action will use the \code{infer_call_signature} function that infers types for each call argument and return value using the type annotation language proposed in Turcotte et al.~\cite{turcotte2020designing}.
+The \code{infer} action will use the \code{infer_call_signature} function that `infers types for each call argument and return value using the type annotation language proposed in Turcotte et al.~\cite{turcotte2020designing}.
 (Specifically, the \emph{contractr} type inference tool provided by the work is used.)
 \code{infer_call_signature} returns a data frame with details for each call.
 % The result depends on the action, but in general, it is a data frame with the details of each of the call.
@@ -534,7 +534,7 @@ One advantage of using R is that we can use R's many data analysis functions.
 For example, we can look at the resulting signatures:
 
 \begin{lstlisting}
-> count(a, result)
+> count(R, result)
 # A tibble: 4 x 2
   result                                                            n
   <chr>                                                         <int>
