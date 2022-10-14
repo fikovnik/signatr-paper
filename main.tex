@@ -43,7 +43,7 @@ functions from \UFNumPackages R packages, revealing
 
 Dynamic analysis is often the only practical way to analyse code
 written in dynamic languages as the semantics of these languages
-renders static analyses useless.  Dynamic analysis, however, requires
+severely limits static analyses.  Dynamic analysis, however, requires
 both code to run and valid inputs for said code. To draw conclusions
 about a code base, one could run the existing, runnable code, \Eg,
 tests, but such code paints an incomplete picture as it is challenging
@@ -342,6 +342,13 @@ budget is exhausted.
 
 \input{code-and-figures/approach-algorithms.tex}
 
+\subsection{Intended Use}
+\label{sec:intended-use}
+
+The tracing discussed in Section~\ref{sec:argtracer} is costly in that running large swaths of R code takes time.
+Thankfully, this only needs to be done \textit{once} to construct a database, which can then be reused by the fuzzer.
+For simplicity, our artifact\footnote{\url{https://github.com/PRL-PRG/sle22-signatr-artifact}} contains instructions to download a 10GB sample database.
+
 \section{Assessment}
 \label{sec:assessment}
 
@@ -408,12 +415,13 @@ Next, we looked at code coverage to see if the new call signatures translated to
 Using the \code{covr} package\footnote{The only tool for R code coverage, \Cf~\url{https://covr.r-lib.org}}, we computed line coverage of R source code for \UFNumFunctionsWithBothCoverage functions using the fuzzed calls, and separately using the traced calls.
 This is not all of the functions that \tool managed to fuzz, as running \code{covr} on some functions caused runtime errors, and also repeating certain calls failed (both fuzzed and traced).
 For \UFBetterCoverage functions, \tool improved code coverage on average by \UFBetterCoverageMean (as compared with coverage obtained by simply running package tests, examples, and vignettes).
-This suggests that most of the new call signatures do not exercise new code paths, but instead point to extensive polymorphism of R functions caused by both genericity and the implicit value coercion. 
+% This suggests that most of the new call signatures do not exercise new code paths, but instead point to extensive polymorphism of R functions caused by both genericity and the implicit value coercion. 
+1.2M new calls yielded only 20.4\% more coverage---while new code paths were explored, the extensive polymorphism and pervasiveness of coercion in R mean that most of these new calls did not exercise new R code.
 
 \paragraph{Summary}
 
-\tool uncovers many interesting calls to functions beyond what tracing discovers alone, particularly for highly polymorphic functions.
-Together, existing and generated calls yields a wealth of interesting, runnable code that will be essential fot the further design of a possible type system for the R programming language.
+\tool uncovers many calls with new type signatures, signficantly expanding on what tracing alone can discover, particularly for polymorphic functions.
+Together, existing and generated calls yields a wealth of interesting runnable code that will be essential fot the further design of a possible type system for the R programming language.
 
 % how often R crashed
 
@@ -432,6 +440,10 @@ However, it is hindered by the permissive semantics of dynamic languages as well
 In this work, we proposed a fuzzing approach that relies on a database of observed values to provide complex and realistic inputs for functions.
 We implement this approach in a tool called \tool for the R programming language.
 We show that \tool uncovers many new call signatures for R functions and it can be a useful tool in a data-driven language evolution toolbox.
+
+There are various avenues to improve the tool itself.
+For instance, the fuzzing component of our approach could be enhanced to consider the types of default function parameters.
+Further, we could expand the database with knowledge of how values co-occur, which would add more dimensions to how values can be selected.
 
 While this approach was implemented in a tool for R, it is broadly applicable in all languages, and the only real language-specific aspect is the set of parameters in the database.
 For instance, one could implement a similar tool for object-oriented languages, where database metadata could include object field names (\Eg, JavaScript).
