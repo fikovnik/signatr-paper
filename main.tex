@@ -1,4 +1,23 @@
-\documentclass[sigplan,nonacm,anonymous,review]{acmart}
+\documentclass[sigplan,screen]{acmart}
+
+%%% If you see 'ACMUNKNOWN' in the 'setcopyright' statement below,
+%%% please first submit your publishing-rights agreement with ACM (follow link on submission page).
+%%% Then please reload our instructions page and copy-and-paste the NEW commands into your article.
+%%% Please contact us in case of questions; allow up to 10 min for the system to propagate the information.
+%%%
+%%% The following is specific to SLE '22 and the paper
+%%% 'signatr: A Data-Driven Fuzzing Tool for R'
+%%% by Alexi Turcotte, Pierre Donat-Bouillud, Filip Křikava, and Jan Vitek.
+%%%
+% \setcopyright{ACMUNKNOWN}
+% \acmPrice{15.00}
+% \acmDOI{10.1145/3567512.3567530}
+% \acmYear{2022}
+% \copyrightyear{2022}
+% \acmSubmissionID{splashws22slemain-p52-p}
+% \acmISBN{978-1-4503-9919-7/22/12}
+% \acmConference[SLE '22]{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering}{December 06--07, 2022}{Auckland, New Zealand}
+% \acmBooktitle{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering (SLE '22), December 06--07, 2022, Auckland, New Zealand}
 
 \usepackage{authorcomments}
 \usepackage{listings}
@@ -12,6 +31,40 @@
 \input{code-and-figures/experiment-db.tex}
 \input{code-and-figures/experiment-uf.tex}
 \input{code-and-figures/experiment-tracer.tex}
+
+\author{Alexi Turcotte}
+\email{turcotte.al@northeastern.edu}
+\affiliation{%
+  \institution{Northeastern University}
+  \city{Boston}
+  \state{MA}
+  \country{USA}
+}
+
+\author{Pierre Donat-Bouillud}
+\email{donatpie@fit.cvut.cz}
+\affiliation{%
+  \institution{Czech Technical University Prague}
+  \city{Prague}
+  \country{Czech Republic}
+}
+
+\author{Filip K\v{r}ikava}
+\email{filip.krikava@fit.cvut.cz}
+\affiliation{%
+  \institution{Czech Technical University Prague}
+  \city{Prague}
+  \country{Czech Republic}
+}
+
+\author{Jan Vitek}
+\email{j.vitek@northeastern.edu}
+\affiliation{%
+  \institution{Northeastern University}
+  \city{Boston}
+  \state{MA}
+  \country{USA}
+}
 
 \begin{document}
 
@@ -30,7 +83,7 @@ difficult to intuit, limiting a fuzzer's reach.
 
 We propose a feedback-driven blackbox fuzzing approach which draws inputs from a
 database of values recorded from existing code.  We implement this
-approach in a tool called \tool for the R programming language.  We
+approach in a tool called \tool for the R language.  We
 present the insights of its design and implementation, and assess
 \tool's ability to uncover new behaviors by fuzzing \UFNumFunctions R
 functions from \UFNumPackages R packages, revealing
@@ -47,12 +100,10 @@ severely limits static analyses.  Dynamic analysis, however, requires
 both code to run and valid inputs for said code. To draw conclusions
 about a code base, one could run the existing, runnable code, \Eg,
 tests, but such code paints an incomplete picture as it is challenging
-to fully cover the range of behaviors allowed by the permissive
-semantics of dynamic languages.
+to fully cover the range of behaviors allowed by dynamic languages.
 
 To increase coverage, one could make use of a \textit{fuzzer}, a tool
-that exercises code by generating random inputs.  Fuzz testing is
-popular and has seen widespread adoption, primarily to find bugs,
+that exercises code by generating random inputs.  Fuzz testing has seen widespread adoption, primarily to find bugs,
 performance pathologies, and security vulnerabilities.  However,
 dynamically typed languages such as Python, JavaScript, and R pose unique
 challenges that revolve around the idea that \textit{dynamic code
@@ -104,7 +155,7 @@ used here.
 We explore an approach to fuzzing where no input is required from the
 programmer. One of the earliest fuzzers is Randoop,
 a feedback-driven random test generation tool for
-Java~\cite{pacheco2007randoop}.  Essentially, sequences of method
+Java~\cite{pacheco2007randoop}, where sequences of method
 calls are generated to test classes, and arguments are randomly
 generated for these calls. For primitive values, a random value is
 selected from a predefined, but user-extensible list; for reference
@@ -120,7 +171,7 @@ usefulness of such approaches. American Fuzzy Lop (AFL) is a
 state-of-the-art industrial fuzzer~\cite{afl}. AFL takes a program and
 one example file as input, calls the program with the input, and then
 uses a variety of heuristics to transform the input and fuzz the
-program.  AFL aims to find defects, looking for edge cases, while our approach
+program.  AFL aims to find defects, while our approach
 aims to find novel inputs that successfully execute.
 
 \paragraph{The R Programming Language}
@@ -130,7 +181,7 @@ language features making it a challenging target for
 tooling~\cite{morandat2012evaluating}.  Challenges include:
 
 \begin{compactitem}[$-$]
-\item The lack of type annotations or static type system; so there is
+\item The lack of a static type system, so there is
   little to suggest what expected arguments or return values are.
 \item Primitive values (booleans, integers, ...)  have a separate
   ``NA'' value indicating that data is ``not available''.
@@ -149,7 +200,6 @@ tooling~\cite{morandat2012evaluating}.  Challenges include:
   frequent than in traditional imperative languages.
 \end{compactitem}
 
-\bigskip
 There has been work on a static type system for
 R~\cite{turcotte2020designing}.  A simple type annotation language has
 been evaluated on a corpus of 400 R packages.  As part of our
@@ -416,7 +466,7 @@ Using the \code{covr} package\footnote{The only tool for R code coverage, \Cf~\u
 This is not all of the functions that \tool managed to fuzz, as running \code{covr} on some functions caused runtime errors, and also repeating certain calls failed (both fuzzed and traced).
 For \UFBetterCoverage functions, \tool improved code coverage on average by \UFBetterCoverageMean (as compared with coverage obtained by simply running package tests, examples, and vignettes).
 % This suggests that most of the new call signatures do not exercise new code paths, but instead point to extensive polymorphism of R functions caused by both genericity and the implicit value coercion. 
-1.2M new calls yielded only 20.4\% more coverage---while new code paths were explored, the extensive polymorphism and pervasiveness of coercion in R mean that most of these new calls did not exercise new R code.
+1.2M new calls yielded only 20.4\% more coverage---while new code paths were explored, the extensive polymorphism and use of coercion in R mean that most of these new calls did not exercise new R code.
 
 \paragraph{Summary}
 
@@ -444,7 +494,6 @@ We show that \tool uncovers many new call signatures for R functions and it can 
 There are various avenues to improve the tool itself.
 For instance, the fuzzing component of our approach could be enhanced to consider the types of default function parameters.
 Further, we could expand the database with knowledge of how values co-occur, which would add more dimensions to how values can be selected.
-
 While this approach was implemented in a tool for R, it is broadly applicable in all languages, and the only real language-specific aspect is the set of parameters in the database.
 For instance, one could implement a similar tool for object-oriented languages, where database metadata could include object field names (\Eg, JavaScript).
 
