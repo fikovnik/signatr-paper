@@ -139,21 +139,20 @@ test, example, and vignette code.  Fuzzing \UFNumFunctions of those R
 functions with our tool generated \UFSignatrSignaturesRnd new unique
 signatures compared to the original study.
 
-In summary, our contributions are:
-\begin{inparaenum}[(1)]
-\item a fuzzing technique relying on a database of observed values;
-\item an implementation of this approach in a tool for R; and
-\item a use case where we generate yet unseen signatures.
-\end{inparaenum} 
-Our tool is open source and is available online alongside the data set
-used here.
+% In summary, our contributions are:
+% \begin{inparaenum}[(1)]
+% \item a fuzzing technique relying on a database of observed values;
+% \item an implementation of this approach in a tool for R; and
+% \item a use case where we generate yet unseen signatures.
+% \end{inparaenum} 
+% Our tool is open source and is available online alongside the data set
+% used here.
 
 \section{Background and Related Work}
 \label{sec:background}
 
 \paragraph{Related Work}
-We explore an approach to fuzzing where no input is required from the
-programmer. One of the earliest fuzzers is Randoop,
+One of the earliest fuzzers is Randoop,
 a feedback-driven random test generation tool for
 Java~\cite{pacheco2007randoop}, where sequences of method
 calls are generated to test classes, and arguments are randomly
@@ -174,11 +173,11 @@ uses a variety of heuristics to transform the input and fuzz the
 program.  AFL aims to find defects, while our approach
 aims to find novel inputs that successfully execute.
 
-\paragraph{The R Programming Language}
+\paragraph{The R Language}
 
 We present a fuzzing tool called \tool for R, a language which sports an unusual mix of
 language features making it a challenging target for
-tooling~\cite{morandat2012evaluating}.  Challenges include:
+tooling~\cite{morandat2012evaluating}:
 
 \begin{compactitem}[$-$]
 \item The lack of a static type system, so there is
@@ -193,17 +192,16 @@ tooling~\cite{morandat2012evaluating}.  Challenges include:
   the building blocks for advanced features such as
   object-orientation.  In R, there is no description of a shape of an
   object, it is simply a value with the \code{class} attribute.
-\item Function arguments are evaluated lazily resulting in unpredictable
-  ordering of side-effects.
 \item Shared values are copied on write. A value is shared if it is
   accessible from multiple variables. Thus visible side effects are less
   frequent than in traditional imperative languages.
+\item Function arguments are evaluated lazily resulting in unpredictable
+  ordering of side-effects.
 \end{compactitem}
 
 There has been work on a static type system for
 R~\cite{turcotte2020designing}.  A simple type annotation language has
-been evaluated on a corpus of 400 R packages.  As part of our
-assessment of \tool, we will revisit that work and demonstrate improvements
+been evaluated on a corpus of 400 R packages. In Section~\ref{sec:assessment}, we will revisit that work and demonstrate improvements
 by discovering new signatures for the previously studied functions.
 
 \section{Approach}
@@ -211,13 +209,13 @@ by discovering new signatures for the previously studied functions.
 There are two main phases to our approach:
 %
 \begin{inparaenum}[(1)]
-\item \emph{recording} R code as it runs; this involves capturing
+\item \emph{recording} R code as it runs (Fig.~\ref{fig:sxpdb-pipeline}); this involves capturing
   function arguments and return values in our value database, and
-\item \emph{fuzzing} by drawing inputs to functions from the database.
+\item \emph{fuzzing} by drawing inputs to functions from the database (Fig.~\ref{fig:fuzz-pipeline}).
 \end{inparaenum}
-This is pictured in Figures~\ref{fig:sxpdb-pipeline} and
-\ref{fig:fuzz-pipeline} for the recording and fuzzing phases
-respectively.
+% This is pictured in Figures~\ref{fig:sxpdb-pipeline} and
+% \ref{fig:fuzz-pipeline} for the recording and fuzzing phases
+% respectively.
 
 For the recording phase, runnable code is extracted from examples and tests in packages.  
 This runnable code consists of a set of scripts
@@ -237,11 +235,9 @@ successful call is defined as one that generated no warnings, errors,
 and did not cause R to crash.  The fuzzer relies on hooks before and
 after function execution: the hook before invocation allows the fuzzer
 to process inputs, and the hook after allows errors to be signalled
-and handled and the return value to be processed.  The
-after-invocation hook can also be used to expand the feedback given to
-the fuzzer.  Concretely, the fuzzer runs the functions using an
+and handled and the return value to be processed.  Concretely, the fuzzer runs the functions using an
 extended R virtual machine that supports attaching callbacks to
-various runtime events~\cite{goel2019}.  Users can also plug their own
+various runtime events~\cite{goel2019}.  Users can also plug a
 dynamic analysis directly into the pipeline.
 
 Since R can crash (and does), to avoid losing results each instance
@@ -277,10 +273,9 @@ the call stack balanced as the interpreter uses long jumps for loop
 control flow, return statements, and error handling.  (On a long jump,
 the exit hook is ignored, so we maintain our own version of the call stack
 to capture all function exits.)
-
 When the tracer sees a call, it only sees a pointer to a closure, and the
 function's name and its package can only be found by searching through
-the loaded name\-spaces and the symbols they contain.  Because of this,
+the loaded name\-spaces and the symbols they contain.  Thus,
 the tracer eagerly builds an index of package and function names when
 name\-space functions are loaded.
 
@@ -293,9 +288,9 @@ C++ code.
 
 \subsection{Database of Values}\label{sec:sxpdb}
 
-The database is hand-written in order to leverage domain-knowledge of
-R values, and optimize it for the queries supported by our API.  It is
-implemented in 5K lines of C++ and 1.5K lines of R code.
+The database is hand-written to leverage domain-knowledge of
+R values and optimize it for the queries supported by our API.  It is
+implemented in 5K lines of C++ and 1.5K lines of R.
 
 \paragraph{Storage}
 
@@ -326,7 +321,7 @@ observed.
 
 The database maintains tables for the hashes, runtime metadata (e.g.,
 how often a value was seen), static metadata, origins, call ids, and
-class names.  Variable length data, such as the serialized values, are
+class names.  Variable length data are
 stored in a combination of 2 tables, one giving an offset into the
 other table which holds the size of the value and the value itself.
 Origin strings and class names are interned, i.e., each unique string
@@ -345,12 +340,8 @@ query larger-than-memory databases.
 
 Values can be queried based on their {\tt typeof}-type or class, on
 the presence of NAs, number of attributes, and dimensions.  The database
-can be queried for a random value with the desired metadata (e.g., query for a
-vector of integers of length 10), or can be queried by providing an
-existing value along with a list of search parameters to be relaxed
-(e.g., query for a value similar to {\tt 42}, but relax
-on the length).  A custom predicate can also be used to filter
-returned values.
+can be queried for a random value with the desired metadata, or can be queried by providing an
+existing value along with a list of search parameters to be relaxed.  
 
 \subsection{Fuzzing}
 
