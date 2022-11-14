@@ -9,13 +9,17 @@
 %%% 'signatr: A Data-Driven Fuzzing Tool for R'
 %%% by Alexi Turcotte, Pierre Donat-Bouillud, Filip Křikava, and Jan Vitek.
 %%%
-\copyrightyear{2022}
-\acmYear{2022}
 \setcopyright{rightsretained}
+\acmPrice{}
+\acmDOI{10.1145/3567512.3567530}
+\acmYear{2022}
+\copyrightyear{2022}
 \acmSubmissionID{splashws22slemain-p52-p}
-\acmConference[SLE '22]{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering}{December 6--7, 2022}{Auckland, New Zealand}
-\acmBooktitle{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering (SLE '22), December 6--7, 2022, Auckland, New Zealand}\acmDOI{10.1145/3567512.3567530}
 \acmISBN{978-1-4503-9919-7/22/12}
+\acmConference[SLE '22]{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering}{December 06--07, 2022}{Auckland, New Zealand}
+\acmBooktitle{Proceedings of the 15th ACM SIGPLAN International Conference on Software Language Engineering (SLE '22), December 06--07, 2022, Auckland, New Zealand}
+%\received{2022-08-08}
+%\received[accepted]{2022-09-30}
 
 \usepackage{authorcomments}
 \usepackage{listings}
@@ -421,7 +425,7 @@ Note that 0.5\% are logical \textit{vectors} of varying length, not simply {\tt 
 
 \begin{figure}
     \centering
-    \includegraphics[width=.6\columnwidth]{code-and-figures/argsdb-value-distribution.pdf}
+    \includegraphics[width=.6\columnwidth]{code-and-figures/argsdb-value-distribution-emb.pdf}
     \vspace{-3mm}
     \caption{The \sxpdb value type distribution}
     \label{fig:argsdb-value-distribution}
@@ -466,7 +470,7 @@ Together, existing and generated calls yields a wealth of interesting runnable c
 
 \begin{figure}
     \centering
-    \includegraphics[width=\columnwidth]{code-and-figures/uf-call-signatures.pdf}
+    \includegraphics[width=\columnwidth]{code-and-figures/uf-call-signatures-emb.pdf}
     \caption{Number of unique call signatures.}
     \label{fig:call-signatures}
 \end{figure}
@@ -503,38 +507,38 @@ We begin by starting R (concretely, \emph{R-dyntrace} version 4.0.2 which has th
 In the following listings, the \code{\$} indicates shell prompt and \code{>} denotes the R REPL.
 
 \begin{lstlisting}
-	$ R
-	R version 4.0.2 (2020-06-22) -- "Taking Off Again"
-	...
-	> library(signatr)
+$ R
+R version 4.0.2 (2020-06-22) -- "Taking Off Again"
+...
+> library(signatr)
 \end{lstlisting}
 
 To generate a database of values, we need some code to run.
 One way to get it is to extract it from an existing R package, for example \code{stringr}:
 
 \begin{lstlisting}
-	> extract_package_code("stringr", output_dir = "demo")
-	...
-	7 examples/str_detect.Rd.R   examples
-	...
+> extract_package_code("stringr", output_dir = "demo")
+...
+7 examples/str_detect.Rd.R   examples
+...
 \end{lstlisting}
 
 This will extract all the runnable snippets from the package documentation and tests into the given directory.
 For example:
 
 \begin{lstlisting}
-	$ cat demo/examples/str_detect.Rd.R
-	...
-	fruit <- c("apple", "banana", "pear", "pinapple")
-	str_detect(fruit, "a")
-	str_detect(fruit, "^a")
-	...
+$ cat demo/examples/str_detect.Rd.R
+...
+fruit <- c("apple", "banana", "pear", "pinapple")
+str_detect(fruit, "a")
+str_detect(fruit, "^a")
+...
 \end{lstlisting}
 
 Next, we trace the file by executing it and recording all the calls using the \code{trace_file} function:
 
 \begin{lstlisting}
-	> trace_file("demo/examples/str_detect.Rd.R", db_path = "demo.sxpdb")
+> trace_file("demo/examples/str_detect.Rd.R", db_path = "demo.sxpdb")
 	status   time   db_size   error
 	0  0.024        20      NA
 \end{lstlisting}
@@ -549,12 +553,12 @@ Once the database is ready, we can start fuzzing.
 The fuzzer has a number of configuration points, but the easiest starting point is the \code{quick_fuzz} helper function:
 
 \begin{lstlisting}
-	> R <- quick_fuzz("stringr", "str_detect", "demo.sxpdb",
-	budget = 100, action = "infer")
+> R <- quick_fuzz("stringr", "str_detect", "demo.sxpdb",
+budget = 100, action = "infer")
 
-	started a new runner:PROCESS 'R', running, pid 4157
-	fuzzing stringr:::str_detect [======] 100/100 (100%) 39s
-	stopped runner:PROCESS 'R', running, pid 4157
+started a new runner:PROCESS 'R', running, pid 4157
+fuzzing stringr:::str_detect [======] 100/100 (100%) 39s
+stopped runner:PROCESS 'R', running, pid 4157
 \end{lstlisting}
 
 The \code{infer} action will use the \code{infer_call_signature} function that infers types for each call argument and return value using the type annotation language of Turcotte et al.~\cite{turcotte2020designing} (with the \emph{contractr} type inference tool). \code{infer_call_signature} returns a data frame with details for each call.
@@ -562,13 +566,13 @@ The \code{infer} action will use the \code{infer_call_signature} function that i
 Here, the data frame includes the inferred signature in the \code{result} column. % added there by the \code{infer_call_signature} function.
 
 \begin{lstlisting}
-	> print(R)
-	# A tibble: 100 x 6
-	args_idx  error                status result               time
-	<list>    <chr>                <int>  <chr>                <drtn>
-	1 <int [3]> "Error in UseMeth...       1  NA                 0.0363
-	2 <int [3]>  NA                        0  (character[],...   0.0351
-	...
+> print(R)
+# A tibble: 100 x 6
+args_idx  error                status result               time
+<list>    <chr>                <int>  <chr>                <drtn>
+1 <int [3]> "Error in UseMeth...       1  NA                 0.0363
+2 <int [3]>  NA                        0  (character[],...   0.0351
+...
 \end{lstlisting}
 
 The above listing shows two calls: a failed one (non-zero status) with an error message, and a successful one with an inferred signature.
@@ -578,19 +582,19 @@ One advantage of using R is that we can use R's many data analysis functions.
 For example, we can look at the resulting signatures:
 
 \begin{lstlisting}
-	> count(R, result)
-	# A tibble: 4 x 2
-	result                                                            n
-	<chr>                                                         <int>
-	1 (character[], ^character[], double) => ^logical[]                 1
-	2 (character[], character, integer) => logical[]                    1
-	3 (list<integer>, character[], list<integer>) => logical[]          1
-	4 NA                                                               97
+> count(R, result)
+# A tibble: 4 x 2
+result                                                            n
+<chr>                                                         <int>
+1 (character[], ^character[], double) => ^logical[]                 1
+2 (character[], character, integer) => logical[]                    1
+3 (list<integer>, character[], list<integer>) => logical[]          1
+4 NA                                                               97
 \end{lstlisting}
 
 This shows that in three cases, the fuzzer managed to generate a call that was successful, and the signatures of those calls. If you are repeating these steps, it is possible that your results will be different since fuzzing is non-deterministic.
 
-\footnotesize 
+\footnotesize % this should be at least 8pt
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{fuzzing}
 
