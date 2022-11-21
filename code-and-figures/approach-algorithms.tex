@@ -1,5 +1,6 @@
 \begin{algorithm}
 \caption{Selecting Arguments for A Call}\label{alg:arg-sel}
+\small
 \begin{algorithmic}[1]
 \Procedure{getArgs}{$f,numRelax,db,succs$}
 \State{$params \gets getParams(f)$}
@@ -20,6 +21,7 @@
 
 \begin{algorithm}
 \caption{Fuzzing}\label{alg:fuzzer}
+\small
 \begin{algorithmic}[1]
 \Procedure{fuzzWithDB}{$f,db,budget$}
 \State $succs \gets getSuccessfulCalls(f, db)$

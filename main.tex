@@ -181,7 +181,7 @@ types, a value is selected at random from those which have been seen,
 and if none are available then {\tt null} is selected.  While this
 technique is effective at generating tests involving non-trivial
 objects that are built up from a number of method calls, data science
-languages like R oftern require generating realistic data.  QuickCheck
+languages like R often require generating realistic data.  QuickCheck
 is another interesting tool in this space~\cite{quickcheck}.  While it
 can generate random inputs, the strategy for constructing inputs needs
 to be specified.  The lack of type information in R limits the
@@ -253,7 +253,7 @@ output of the fuzzer is a list of successful function calls, where a
 successful call is defined as one that generated no warnings, errors,
 and did not cause R to crash.  The fuzzer relies on hooks before and
 after function execution: the hook before invocation allows the fuzzer
-to process inputs, and the hook after allows errors to be signalled
+to process inputs, and the hook after allows errors to be signaled
 and handled and the return value to be processed.  Concretely, the fuzzer runs the functions using an
 extended R virtual machine that supports attaching callbacks to
 various runtime events~\cite{goel2019}.  Users can also plug a
@@ -261,7 +261,7 @@ dynamic analysis directly into the pipeline.
 
 Since R can crash (and does), to avoid losing results each instance
 of the fuzzer consists of two processes: a worker that fuzzes, and a
-supervisor that can spawn workers if neeeded.  Furthermore, the fuzzer
+supervisor that can spawn workers if needed.  Furthermore, the fuzzer
 runs isolated in a container as calling arbitrary code could have dire
 consequences.
 
@@ -315,7 +315,7 @@ implemented in 5K lines of C++ and 1.5K lines of R.
 
 
 The database stores unique values.  We use XXH\-128 hashes for
-uniqueness in combination with a hashtable based on RobinHood
+uniqueness in combination with a hash table based on RobinHood
 hashing\footnote{\url{cyan4973.github.io/xxHash},
 \url{github.com/martinus/robin-hood-hashing}}.  While the hashing is
 fast, we need to lower R values into a binary format.  R provides a
@@ -480,14 +480,14 @@ For \UFBetterCoverage functions, \tool improved code coverage on average by \UFB
 
 \paragraph{Summary}
 
-\tool uncovers many calls with new type signatures, signficantly expanding on what tracing alone can discover, particularly for polymorphic functions.
-Together, existing and generated calls yields a wealth of interesting runnable code that will be essential fot the further design of a possible type system for the R programming language.
+\tool uncovers many calls with new type signatures, significantly expanding on what tracing alone can discover, particularly for polymorphic functions.
+Together, existing and generated calls yields a wealth of interesting runnable code that will be essential for the further design of a possible type system for the R programming language.
 
 % how often R crashed
 
 \begin{figure}
     \centering
-    \includegraphics[width=\columnwidth]{code-and-figures/uf-call-signatures-emb.pdf}
+    \includegraphics[width=0.85\columnwidth]{code-and-figures/uf-call-signatures-emb.pdf}
     \caption{Number of unique call signatures.}
     \label{fig:call-signatures}
 \end{figure}
